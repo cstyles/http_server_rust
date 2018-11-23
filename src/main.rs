@@ -95,8 +95,11 @@ fn list_directory(path: &Path, path_str: &str) -> Response<Body> {
             for entry in entries {
                 match entry {
                     Ok(e) => {
-                        let file_name = e.file_name().into_string().unwrap();
-                        // TODO: Add '/' if directory
+                        let mut file_name = e.file_name().into_string().unwrap();
+                        let p = e.path();
+                        if Path::new(&p).is_dir() {
+                            file_name.push_str("/");
+                        }
                         v.push(file_name);
                     },
                     Err(e) => eprintln!("Err with read_dir: {}", e),
