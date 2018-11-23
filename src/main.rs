@@ -1,11 +1,21 @@
 extern crate hyper;
 
+#[macro_use]
+extern crate tera;
+#[macro_use]
+extern crate lazy_static;
+
 use hyper::{Body, Request, Response, Server, StatusCode};
 use hyper::rt::Future;
 use hyper::service::service_fn_ok;
+use tera::{Tera, Context};
 
 use std::path::{Path};
 use std::fs::{read_dir, read};
+
+lazy_static! {
+    pub static ref TERA: Tera = compile_templates!("templates/*.html");
+}
 
 fn main() {
     // let addr = ([127, 0, 0, 1], 8000).into();
@@ -33,7 +43,7 @@ fn my_server(req: Request<Body>) -> Response<Body> {
         if path.to_str().unwrap().ends_with("/") {
             // List the contents of the directory
             println!("path: {} || listing directory", path_str);
-            list_directory(path)
+            list_directory(path, &path_str)
         } else {
             // Redirect to the same directory but with a trailing /
             let new_path_string = format!("{}/", path_str);
@@ -77,14 +87,18 @@ fn read_file(path: &Path) -> Response<Body> {
     }
 }
 
-fn list_directory(path: &Path) -> Response<Body> {
+fn list_directory(path: &Path, path_str: &str) -> Response<Body> {
     match read_dir(path) {
         Ok(entries) => {
-            // Create a sorted list of PathBuf objects
+            // Create a sorted list of file_names (Strings)
             let mut v = Vec::new();
             for entry in entries {
                 match entry {
-                    Ok(e) => v.push(e.path()),
+                    Ok(e) => {
+                        let file_name = e.file_name().into_string().unwrap();
+                        // TODO: Add '/' if directory
+                        v.push(file_name);
+                    },
                     Err(e) => eprintln!("Err with read_dir: {}", e),
                 }
             }
@@ -94,18 +108,12 @@ fn list_directory(path: &Path) -> Response<Body> {
             // TODO:
             // - Prettify, add links
             // - Unicode
-            let mut s = String::new();
-            for entry in v {
-                let file_name = entry.file_name().unwrap().to_str().unwrap();
-                s.push_str(file_name);
-                if entry.is_dir() {
-                    s.push_str("/");
-                }
-                s.push_str("\n");
-            }
-
+            let mut context = Context::new();
+            context.insert("path_str", path_str);
+            context.insert("entries", &v);
+            let body = TERA.render("listing.html", &context).unwrap();
             Response::builder()
-                .body(Body::from(s))
+                .body(Body::from(body))
                 .unwrap()
         },
         Err(e) => {
