@@ -123,7 +123,18 @@ fn list_directory(path: &Path, path_str: &str) -> Response<Body> {
             let mut context = Context::new();
             context.insert("path_str", path_str);
             context.insert("entries", &v);
-            let body = TERA.render("listing.html", &context).unwrap();
+
+            let body = match TERA.render("listing.html", &context) {
+                Ok(body) => body,
+                Err(error) => {
+                    let error = format!("Templating error: {}", error);
+                    eprintln!("{}", error);
+                    return Response::builder()
+                        .body(Body::from(error))
+                        .unwrap()
+                }
+            };
+
             Response::builder()
                 .body(Body::from(body))
                 .unwrap()
