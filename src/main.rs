@@ -1,5 +1,8 @@
 extern crate hyper;
 
+extern crate percent_encoding;
+use percent_encoding::percent_decode;
+
 #[macro_use]
 extern crate tera;
 #[macro_use]
@@ -35,7 +38,13 @@ fn main() {
 }
 
 fn my_server(req: Request<Body>) -> Response<Body> {
-    let path_str = req.uri().path();
+    let path_str = match percent_decode(req.uri().path().as_bytes()).decode_utf8() {
+        Ok(path) => path,
+        Err(_) => return Response::builder()
+            .status(StatusCode::BAD_REQUEST)
+            .body(Body::from("URI wasn't valid UTF-8"))
+            .unwrap()
+    };
     let local_path_string = format!(".{}", path_str);
     let path = Path::new(local_path_string.as_str());
 
