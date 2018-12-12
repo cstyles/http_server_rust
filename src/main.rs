@@ -21,7 +21,7 @@ lazy_static! {
 }
 
 fn main() {
-    // let addr = ([127, 0, 0, 1], 8000).into();
+    // TODO: Add command-line option to set port
     let addr = ([0, 0, 0, 0], 8000).into();
     let new_svc = || {
         service_fn_ok(my_server)
@@ -38,6 +38,7 @@ fn main() {
 }
 
 fn my_server(req: Request<Body>) -> Response<Body> {
+    // TODO: Handle method (i.e., return error for POSTs, etc.)
     let path_str = match percent_decode(req.uri().path().as_bytes()).decode_utf8() {
         Ok(path) => path,
         Err(_) => return Response::builder()
@@ -69,10 +70,11 @@ fn my_server(req: Request<Body>) -> Response<Body> {
         read_file(path)
     } else {
         // Doesn't exist
-        eprintln!("Error: File/dir doesn't exist");
+        let error = format!("Error: File/dir ({}) doesn't exist", path_str);
+        eprintln!("{}", error);
         Response::builder()
             .status(StatusCode::NOT_FOUND)
-            .body(Body::from("Error: File/dir doesn't exist"))
+            .body(Body::from(error))
             .unwrap()
     }
 }
@@ -117,9 +119,6 @@ fn list_directory(path: &Path, path_str: &str) -> Response<Body> {
             v.sort_unstable();
 
             // List all files + directories
-            // TODO:
-            // - Prettify, add links
-            // - Unicode
             let mut context = Context::new();
             context.insert("path_str", path_str);
             context.insert("entries", &v);
