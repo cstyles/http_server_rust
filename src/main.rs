@@ -3,6 +3,9 @@ extern crate hyper;
 extern crate percent_encoding;
 use percent_encoding::percent_decode;
 
+extern crate clap;
+use clap::{App, Arg, ArgMatches};
+
 #[macro_use]
 extern crate tera;
 #[macro_use]
@@ -21,8 +24,18 @@ lazy_static! {
 }
 
 fn main() {
-    // TODO: Add command-line option to set port
-    let addr = ([0, 0, 0, 0], 8000).into();
+    let args = get_args();
+
+    let arg_port = args.value_of("port").unwrap();
+    let port: u16 = match arg_port.parse() {
+        Ok(port) => port,
+        Err(_) => {
+            eprintln!("Invalid port: {}", arg_port);
+            return;
+        }
+    };
+
+    let addr = ([0, 0, 0, 0], port).into();
     let new_svc = || {
         service_fn_ok(my_server)
     };
@@ -35,6 +48,18 @@ fn main() {
         addr.port());
 
     hyper::rt::run(server);
+}
+
+fn get_args<'a>() -> ArgMatches<'a> {
+    App::new("http_server")
+        .version("0.1")
+        .author("Collin Styles <collingstyles@gmail.com")
+        .about("A port of Python3's http.server to Rust")
+        .arg(Arg::with_name("port")
+                 .default_value("8000")
+                 .required(false)
+                 .help("Port to listen on"))
+        .get_matches()
 }
 
 fn my_server(req: Request<Body>) -> Response<Body> {
