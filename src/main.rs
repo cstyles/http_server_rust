@@ -39,13 +39,7 @@ fn main() {
 
 fn my_server(req: Request<Body>) -> Response<Body> {
     // TODO: Handle method (i.e., return error for POSTs, etc.)
-    let path_str = match percent_decode(req.uri().path().as_bytes()).decode_utf8() {
-        Ok(path) => path,
-        Err(_) => return Response::builder()
-            .status(StatusCode::BAD_REQUEST)
-            .body(Body::from("URI wasn't valid UTF-8"))
-            .unwrap()
-    };
+    let path_str = percent_decode(req.uri().path().as_bytes()).decode_utf8_lossy();
     let local_path_string = format!(".{}", path_str);
     let path = Path::new(local_path_string.as_str());
 
@@ -70,12 +64,33 @@ fn my_server(req: Request<Body>) -> Response<Body> {
         read_file(path)
     } else {
         // Doesn't exist
-        let error = format!("Error: File/dir ({}) doesn't exist", path_str);
-        eprintln!("{}", error);
-        Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .body(Body::from(error))
-            .unwrap()
+        eprintln!("Error: File/dir ({}) doesn't exist", path_str);
+
+        let mut context = Context::new();
+        context.insert("error_code", "404");
+        context.insert("message", "File not found");
+
+        match render("error.html", &context) {
+            Ok(body) => Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(body)
+                .unwrap(),
+            Err(resp) => resp,
+        }
+    }
+}
+
+fn render(template_file: &str, context: &Context) -> Result<Body, Response<Body>> {
+    match TERA.render(template_file, context) {
+        Ok(body) => Ok(Body::from(body)),
+        Err(error) => {
+            let error = format!("Templating error: {}", error);
+            eprintln!("{}", error);
+            return Err(Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(Body::from(error))
+                .unwrap())
+        }
     }
 }
 
@@ -123,20 +138,12 @@ fn list_directory(path: &Path, path_str: &str) -> Response<Body> {
             context.insert("path_str", path_str);
             context.insert("entries", &v);
 
-            let body = match TERA.render("listing.html", &context) {
-                Ok(body) => body,
-                Err(error) => {
-                    let error = format!("Templating error: {}", error);
-                    eprintln!("{}", error);
-                    return Response::builder()
-                        .body(Body::from(error))
-                        .unwrap()
-                }
-            };
-
-            Response::builder()
-                .body(Body::from(body))
-                .unwrap()
+            match render("listing.html", &context) {
+                Ok(body) => Response::builder()
+                    .body(body)
+                    .unwrap(),
+                Err(resp) => resp,
+            }
         },
         Err(e) => {
             // Insufficient permissions, probably
