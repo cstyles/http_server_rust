@@ -31,7 +31,7 @@ fn main() {
         Ok(port) => port,
         Err(_) => {
             eprintln!("Invalid port: {}", arg_port);
-            return;
+            return
         }
     };
 
@@ -39,8 +39,15 @@ fn main() {
     let new_svc = || {
         service_fn_ok(my_server)
     };
-    let server = Server::bind(&addr)
-        .serve(new_svc)
+    let server = match Server::try_bind(&addr) {
+        Ok(server) => server,
+        Err(e) => {
+            eprintln!("{}", e);
+            return
+        }
+    };
+
+    let server = server.serve(new_svc)
         .map_err(|e| eprintln!("server error: {}", e));
 
     println!("Serving HTTP on {0} port {1} (http://{0}:{1}/) ...",
