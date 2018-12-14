@@ -86,32 +86,32 @@ fn get_args<'a>() -> ArgMatches<'a> {
 
 fn my_server(req: Request<Body>, directory: &str) -> Response<Body> {
     // TODO: Handle method (i.e., return error for POSTs, etc.)
-    let path_str = percent_decode(req.uri().path().as_bytes()).decode_utf8_lossy();
-    let local_path_string = format!("{}{}", directory, path_str);
-    let path = Path::new(local_path_string.as_str());
+    let uri_path = percent_decode(req.uri().path().as_bytes()).decode_utf8_lossy();
+    let fs_path_string = format!("{}{}", directory, uri_path);
+    let fs_path = Path::new(fs_path_string.as_str());
 
-    if path.is_dir() {
-        if path.to_str().unwrap().ends_with("/") {
+    if fs_path.is_dir() {
+        if uri_path.ends_with("/") {
             // List the contents of the directory
-            println!("path: {} || listing directory", path_str);
-            list_directory(path, &path_str)
+            println!("path: {} || listing directory", uri_path);
+            list_directory(fs_path, &uri_path)
         } else {
             // Redirect to the same directory but with a trailing /
-            let new_path_string = format!("{}/", path_str);
-            println!("path: {} || redirecting to {}", path_str, new_path_string);
+            let new_path_string = format!("{}/", uri_path);
+            println!("path: {} || redirecting to {}", uri_path, new_path_string);
             Response::builder()
                 .status(StatusCode::MOVED_PERMANENTLY)
                 .header("Location", new_path_string)
                 .body(Body::empty())
                 .unwrap()
         }
-    } else if path.is_file() {
+    } else if fs_path.is_file() {
         // Return the file object
-        println!("path: {:?} || reading file", path);
-        read_file(path)
+        println!("path: {} || reading file", uri_path);
+        read_file(fs_path)
     } else {
         // Doesn't exist
-        eprintln!("Error: File/dir ({}) doesn't exist", path_str);
+        eprintln!("Error: File/dir ({}) doesn't exist", uri_path);
 
         let mut context = Context::new();
         context.insert("error_code", "404");
@@ -141,8 +141,8 @@ fn render(template_file: &str, context: &Context) -> Result<Body, Response<Body>
     }
 }
 
-fn read_file(path: &Path) -> Response<Body> {
-    let file_contents = read(path);
+fn read_file(fs_path: &Path) -> Response<Body> {
+    let file_contents = read(fs_path);
 
     match file_contents {
         Ok(contents) => {
@@ -160,8 +160,8 @@ fn read_file(path: &Path) -> Response<Body> {
     }
 }
 
-fn list_directory(path: &Path, path_str: &str) -> Response<Body> {
-    match read_dir(path) {
+fn list_directory(fs_path: &Path, uri_path: &str) -> Response<Body> {
+    match read_dir(fs_path) {
         Ok(entries) => {
             // Create a sorted list of file_names (Strings)
             let mut v = Vec::new();
@@ -182,7 +182,7 @@ fn list_directory(path: &Path, path_str: &str) -> Response<Body> {
 
             // List all files + directories
             let mut context = Context::new();
-            context.insert("path_str", path_str);
+            context.insert("uri_path", uri_path);
             context.insert("entries", &v);
 
             match render("listing.html", &context) {
@@ -194,7 +194,7 @@ fn list_directory(path: &Path, path_str: &str) -> Response<Body> {
         },
         Err(e) => {
             // Insufficient permissions, probably
-            eprintln!("path: {:?} || Error: {}", path, e);
+            eprintln!("path: {} || Error: {}", uri_path, e);
             Response::builder()
                 .status(StatusCode::FORBIDDEN)
                 .body(Body::from(format!("Error: {}", e)))
