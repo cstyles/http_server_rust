@@ -1,25 +1,13 @@
-extern crate hyper;
-
-extern crate percent_encoding;
-use percent_encoding::percent_decode;
-
-extern crate clap;
-use clap::{App, Arg, ArgMatches};
-
-#[macro_use]
-extern crate tera;
-#[macro_use]
-extern crate lazy_static;
-
 use hyper::{Body, Request, Response, Server, StatusCode};
 use hyper::rt::Future;
 use hyper::service::service_fn_ok;
-use tera::{Tera, Context};
-
 use std::path::{Path};
 use std::fs::{read_dir, read};
+use percent_encoding::percent_decode;
+use clap::{App, Arg, ArgMatches};
+use tera::{Tera, Context, compile_templates};
 
-lazy_static! {
+lazy_static::lazy_static! {
     pub static ref TERA: Tera = compile_templates!("templates/*.html");
 }
 
