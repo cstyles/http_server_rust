@@ -156,7 +156,7 @@ fn list_directory(fs_path: &Path, uri_path: &str) -> Response<Body> {
             for entry in entries {
                 match entry {
                     Ok(e) => {
-                        let mut file_name = e.file_name().into_string().unwrap();
+                        let mut file_name = e.file_name().to_string_lossy().to_string();
                         let p = e.path();
                         if Path::new(&p).is_dir() {
                             file_name.push_str("/");
