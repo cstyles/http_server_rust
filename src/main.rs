@@ -35,10 +35,20 @@ fn main() {
         }
     };
 
-    let addr = ([0, 0, 0, 0], port).into();
-    let new_svc = || {
-        service_fn_ok(my_server)
+    let arg_directory = args.value_of("directory").unwrap();
+    let directory = arg_directory.to_owned();
+
+    // Create a service that calls my_server and passes in the directory
+    let new_svc = move || {
+        // This clone is necessary so that "directory" (a String) isn't
+        // referring to a borrowed str from the main method's context
+        let directory = directory.clone();
+        service_fn_ok(move |request| {
+            my_server(request, &directory)
+        })
     };
+
+    let addr = ([0, 0, 0, 0], port).into();
     let server = match Server::try_bind(&addr) {
         Ok(server) => server,
         Err(e) => {
@@ -66,13 +76,18 @@ fn get_args<'a>() -> ArgMatches<'a> {
                  .default_value("8000")
                  .required(false)
                  .help("Port to listen on"))
+        .arg(Arg::with_name("directory")
+                 .short("d")
+                 .long("directory")
+                 .default_value(".")
+                 .help("Port to listen on"))
         .get_matches()
 }
 
-fn my_server(req: Request<Body>) -> Response<Body> {
+fn my_server(req: Request<Body>, directory: &str) -> Response<Body> {
     // TODO: Handle method (i.e., return error for POSTs, etc.)
     let path_str = percent_decode(req.uri().path().as_bytes()).decode_utf8_lossy();
-    let local_path_string = format!(".{}", path_str);
+    let local_path_string = format!("{}{}", directory, path_str);
     let path = Path::new(local_path_string.as_str());
 
     if path.is_dir() {
