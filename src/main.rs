@@ -153,6 +153,9 @@ fn list_directory(fs_path: &Path, uri_path: &str) -> Response<Body> {
         Ok(entries) => {
             // Create a sorted list of file_names (Strings)
             let mut v = Vec::new();
+            if uri_path != "/" {
+                v.push(String::from("../"));
+            }
             for entry in entries {
                 match entry {
                     Ok(e) => {
