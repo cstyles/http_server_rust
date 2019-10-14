@@ -3,6 +3,7 @@ use hyper::rt::Future;
 use hyper::service::service_fn_ok;
 use std::path::{Path};
 use std::fs::{read_dir, read};
+use std::process::exit;
 use percent_encoding::percent_decode;
 use clap::{App, Arg, ArgMatches};
 use tera::{Tera, Context, compile_templates};
@@ -15,13 +16,10 @@ fn main() {
     let args = get_args();
 
     let arg_port = args.value_of("port").unwrap();
-    let port: u16 = match arg_port.parse() {
-        Ok(port) => port,
-        Err(_) => {
-            eprintln!("Invalid port: {}", arg_port);
-            return
-        }
-    };
+    let port: u16 = arg_port.parse().unwrap_or_else(|_err| {
+        eprintln!("Invalid port: {}", arg_port);
+        exit(1);
+    });
 
     let arg_directory = args.value_of("directory").unwrap();
     let directory = arg_directory.to_owned();
@@ -37,13 +35,10 @@ fn main() {
     };
 
     let addr = ([0, 0, 0, 0], port).into();
-    let server = match Server::try_bind(&addr) {
-        Ok(server) => server,
-        Err(e) => {
-            eprintln!("{}", e);
-            return
-        }
-    };
+    let server = Server::try_bind(&addr).unwrap_or_else(|err| {
+        eprintln!("{}", err);
+        exit(1);
+    });
 
     let server = server.serve(new_svc)
         .map_err(|e| eprintln!("server error: {}", e));
