@@ -74,7 +74,7 @@ fn my_server(req: Request<Body>, directory: &str) -> Response<Body> {
     let fs_path = Path::new(fs_path_string.as_str());
 
     if fs_path.is_dir() {
-        if uri_path.ends_with("/") {
+        if uri_path.ends_with('/') {
             // List the contents of the directory
             println!("path: {} || listing directory", uri_path);
             list_directory(fs_path, &uri_path)
@@ -116,7 +116,7 @@ fn render(template_file: &str, context: &Context) -> Result<Body, Response<Body>
         Err(error) => {
             let error = format!("Templating error: {}", error);
             eprintln!("{}", error);
-            return Err(Response::builder()
+            Err(Response::builder()
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
                 .body(Body::from(error))
                 .unwrap())
