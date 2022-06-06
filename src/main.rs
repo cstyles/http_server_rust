@@ -6,14 +6,11 @@ use std::fs::{read_dir, read};
 use std::process::exit;
 use percent_encoding::percent_decode;
 use clap::{Arg, ArgMatches, Command};
-use tera::{Tera, Context, compile_templates};
-
-lazy_static::lazy_static! {
-    pub static ref TERA: Tera = compile_templates!("templates/*.html");
-}
+use tera::{Tera, Context};
 
 fn main() {
     let args = get_args();
+    let tera = Tera::new("templates/*.html").expect("templates should compile");
 
     let arg_port = args.value_of("port").unwrap();
     let port: u16 = arg_port.parse().unwrap_or_else(|_err| {

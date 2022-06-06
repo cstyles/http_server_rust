@@ -6,7 +6,6 @@ edition = "2018"
 
 [dependencies]
 hyper = "0.14"
-tera = "1"
-lazy_static = "1.4"
+tera = { version = "1", default-features = false }
 percent-encoding = "2.1"
 clap = "3.1"
