@@ -5,8 +5,8 @@ authors = ["Collin Styles <cstyles@mitre.org>"]
 edition = "2018"
 
 [dependencies]
-hyper = "0.12"
-tera = "0.11"
-lazy_static = "1.2.0"
-percent-encoding = "1.0.1"
-clap = "2.32.0"
+hyper = "0.14"
+tera = "1"
+lazy_static = "1.4"
+percent-encoding = "2.1"
+clap = "3.1"
