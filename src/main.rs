@@ -5,7 +5,7 @@ use std::path::{Path};
 use std::fs::{read_dir, read};
 use std::process::exit;
 use percent_encoding::percent_decode;
-use clap::{App, Arg, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 use tera::{Tera, Context, compile_templates};
 
 lazy_static::lazy_static! {
@@ -50,17 +50,17 @@ fn main() {
     hyper::rt::run(server);
 }
 
-fn get_args<'a>() -> ArgMatches<'a> {
-    App::new("http_server")
+fn get_args() -> ArgMatches {
+    Command::new("http_server")
         .version("0.1")
         .author("Collin Styles <collingstyles@gmail.com")
         .about("A port of Python3's http.server to Rust")
-        .arg(Arg::with_name("port")
+        .arg(Arg::new("port")
                  .default_value("8000")
                  .required(false)
                  .help("Port to listen on"))
-        .arg(Arg::with_name("directory")
-                 .short("d")
+        .arg(Arg::new("directory")
+                 .short('d')
                  .long("directory")
                  .default_value(".")
                  .help("Port to listen on"))
