@@ -3,11 +3,11 @@ use hyper::service::service_fn;
 use hyper::{Body, Request, Response, Server, StatusCode};
 use percent_encoding::percent_decode;
 use std::convert::Infallible;
-use std::fs::{read, read_dir};
 use std::net::SocketAddr;
 use std::path::Path;
 use std::process::exit;
 use tera::{Context, Tera};
+use tokio::fs::{read, read_dir};
 use tower::make::Shared;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 16)]
@@ -85,7 +85,7 @@ async fn my_server(
         if uri_path.ends_with('/') {
             // List the contents of the directory
             println!("path: {} || listing directory", uri_path);
-            Ok(list_directory(&tera, fs_path, &uri_path))
+            Ok(list_directory(&tera, fs_path, &uri_path).await)
         } else {
             // Redirect to the same directory but with a trailing /
             let new_path_string = format!("{}/", uri_path);
@@ -99,7 +99,7 @@ async fn my_server(
     } else if fs_path.is_file() {
         // Return the file object
         println!("path: {} || reading file", uri_path);
-        Ok(read_file(fs_path))
+        Ok(read_file(fs_path).await)
     } else {
         // Doesn't exist
         eprintln!("Error: File/dir ({}) doesn't exist", uri_path);
@@ -134,10 +134,8 @@ fn render(tera: &Tera, template_file: &str, context: &Context) -> Result<Body, R
     }
 }
 
-fn read_file(fs_path: &Path) -> Response<Body> {
-    let file_contents = read(fs_path);
-
-    match file_contents {
+async fn read_file(fs_path: &Path) -> Response<Body> {
+    match read(fs_path).await {
         Ok(contents) => {
             // TODO: headers (MIME type, etc.)
             Response::builder().body(Body::from(contents)).unwrap()
@@ -151,15 +149,15 @@ fn read_file(fs_path: &Path) -> Response<Body> {
     }
 }
 
-fn list_directory(tera: &Tera, fs_path: &Path, uri_path: &str) -> Response<Body> {
-    match read_dir(fs_path) {
-        Ok(entries) => {
+async fn list_directory(tera: &Tera, fs_path: &Path, uri_path: &str) -> Response<Body> {
+    match read_dir(fs_path).await {
+        Ok(mut entries) => {
             // Create a sorted list of file_names (Strings)
             let mut v = Vec::new();
             if uri_path != "/" {
                 v.push(String::from("../"));
             }
-            for entry in entries {
+            while let Some(entry) = entries.next_entry().await.transpose() {
                 match entry {
                     Ok(e) => {
                         let mut file_name = e.file_name().to_string_lossy().to_string();
