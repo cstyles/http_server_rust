@@ -10,7 +10,7 @@ use std::process::exit;
 use tera::{Context, Tera};
 use tower::make::Shared;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 16)]
 async fn main() {
     let args = get_args();
     let tera = Tera::new("templates/*.html").expect("templates should compile");
