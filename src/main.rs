@@ -165,7 +165,7 @@ fn list_directory(tera: &Tera, fs_path: &Path, uri_path: &str) -> Response<Body>
                         let mut file_name = e.file_name().to_string_lossy().to_string();
                         let p = e.path();
                         if Path::new(&p).is_dir() {
-                            file_name.push_str("/");
+                            file_name.push('/');
                         }
                         v.push(file_name);
                     }
